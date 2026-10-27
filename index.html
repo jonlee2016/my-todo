@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Today's list</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #e8edf1;
+      --grid: #d5dde5;
+      --ink: #1b2a4a;
+      --ink-soft: #5a6884;
+      --mark: #f2de4b;
+      --cell: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Archivo", system-ui, sans-serif;
+      font-size: 17px;
+      line-height: var(--cell);
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: var(--cell) var(--cell);
+    }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: calc(var(--cell) * 4) 24px calc(var(--cell) * 3);
+    }
+
+    button, input { font: inherit; color: inherit; }
+
+    :focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 3px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px; height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    /* Header: the weekday is the hero */
+    .day {
+      margin: 0;
+      font-size: clamp(40px, 12vw, 124px);
+      line-height: 0.9;
+      font-weight: 850;
+      font-variation-settings: "wdth" 125;
+      letter-spacing: -0.02em;
+      animation: stretch 900ms cubic-bezier(.2, .7, .1, 1) both;
+    }
+
+    @keyframes stretch {
+      from { font-variation-settings: "wdth" 62; }
+      to   { font-variation-settings: "wdth" 125; }
+    }
+
+    .date {
+      margin: 12px 0 0;
+      font-size: 20px;
+      color: var(--ink-soft);
+    }
+
+    /* Add form */
+    .add {
+      display: flex;
+      gap: 12px;
+      margin-top: calc(var(--cell) * 2);
+    }
+
+    .add input {
+      flex: 1;
+      min-width: 0;
+      height: calc(var(--cell) * 2);
+      padding: 0 2px;
+      border: 0;
+      border-bottom: 2px solid var(--ink);
+      background: transparent;
+      font-size: 20px;
+    }
+
+    .add input::placeholder { color: var(--ink-soft); }
+    .add input:focus-visible { outline: none; border-bottom-width: 3px; }
+
+    .add button {
+      height: calc(var(--cell) * 2);
+      padding: 0 22px;
+      border: 0;
+      border-radius: 2px;
+      background: var(--ink);
+      color: var(--paper);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 4px;
+      margin: calc(var(--cell) * 1.5) 0 var(--cell);
+    }
+
+    .filters button {
+      padding: 4px 10px;
+      border: 0;
+      border-radius: 2px;
+      background: transparent;
+      color: var(--ink-soft);
+      cursor: pointer;
+    }
+
+    .filters button[aria-pressed="true"] {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .filters .n { font-variant-numeric: tabular-nums; opacity: .75; margin-left: 4px; }
+
+    /* Task list */
+    .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink-soft); }
+
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: calc(var(--cell) * 2);
+      border-bottom: 1px solid var(--ink-soft);
+    }
+
+    .task input[type="checkbox"] {
+      appearance: none;
+      flex: none;
+      width: 22px; height: 22px;
+      margin: 0;
+      border: 2px solid var(--ink);
+      border-radius: 2px;
+      background: transparent;
+      display: grid;
+      place-content: center;
+      cursor: pointer;
+    }
+
+    .task input[type="checkbox"]::after {
+      content: "";
+      width: 10px; height: 6px;
+      border: solid var(--paper);
+      border-width: 0 0 2.5px 2.5px;
+      transform: translateY(-1px) rotate(-45deg) scale(0);
+      transition: transform 120ms ease-out;
+    }
+
+    .task input[type="checkbox"]:checked { background: var(--ink); }
+    .task input[type="checkbox"]:checked::after { transform: translateY(-1px) rotate(-45deg) scale(1); }
+
+    .title {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .title span {
+      padding: 1px 3px;
+      margin: 0 -3px;
+      background: linear-gradient(var(--mark), var(--mark)) no-repeat left center / 0% 100%;
+      transition: background-size 320ms cubic-bezier(.3, .6, .2, 1);
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+    }
+
+    .task.done .title span { background-size: 100% 100%; }
+
+    .edit-input {
+      flex: 1;
+      min-width: 0;
+      height: 36px;
+      padding: 0 6px;
+      border: 0;
+      border-bottom: 2px solid var(--ink);
+      background: rgba(255, 255, 255, .5);
+    }
+
+    .edit-input:focus-visible { outline: none; }
+
+    .actions { display: flex; gap: 2px; flex: none; }
+
+    .actions button {
+      padding: 4px 8px;
+      border: 0;
+      background: transparent;
+      color: var(--ink-soft);
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    .actions button:hover { color: var(--ink); text-decoration: underline; }
+
+    @media (hover: hover) {
+      .actions { opacity: 0; }
+      .task:hover .actions, .task:focus-within .actions { opacity: 1; }
+    }
+
+    .empty {
+      margin: 0;
+      padding: var(--cell) 0;
+      color: var(--ink-soft);
+      border-bottom: 1px solid var(--ink-soft);
+    }
+
+    /* Footer */
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: var(--cell);
+      color: var(--ink-soft);
+      font-size: 15px;
+    }
+
+    .foot button {
+      padding: 4px 0;
+      border: 0;
+      background: transparent;
+      color: var(--ink-soft);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+    }
+
+    .foot button:disabled { opacity: .45; cursor: default; text-decoration: none; }
+
+    @media (max-width: 520px) {
+      main { padding: calc(var(--cell) * 2.5) 16px calc(var(--cell) * 2); }
+      .add button { padding: 0 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .day { animation: none; }
+      .title span, .task input[type="checkbox"]::after { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1 class="day" id="day">Today</h1>
+      <p class="date" id="date"></p>
+    </header>
+
+    <form class="add" id="add-form" autocomplete="off">
+      <label class="visually-hidden" for="new-task">Add a task</label>
+      <input id="new-task" type="text" placeholder="Add a task" maxlength="200">
+      <button type="submit">Add</button>
+    </form>
+
+    <div class="filters" role="group" aria-label="Show tasks">
+      <button type="button" data-filter="all">All<span class="n" data-count="all"></span></button>
+      <button type="button" data-filter="open">To do<span class="n" data-count="open"></span></button>
+      <button type="button" data-filter="done">Done<span class="n" data-count="done"></span></button>
+    </div>
+
+    <ul class="list" id="list"></ul>
+    <p class="empty" id="empty" hidden></p>
+
+    <footer class="foot">
+      <span id="left" aria-live="polite"></span>
+      <button type="button" id="clear-done">Clear done</button>
+    </footer>
+  </main>
+
+  <script>
+    const KEY = "my-todo-2.tasks";
+    const EMPTY = {
+      all: "Nothing on the list. Add your first task above.",
+      open: "Everything is done.",
+      done: "Nothing finished yet."
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const form = $("add-form");
+    const input = $("new-task");
+    const list = $("list");
+
+    let tasks = load();
+    let filter = "all";
+    let editing = null;
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+
+    function load() {
+      try {
+        const data = JSON.parse(localStorage.getItem(KEY));
+        if (!Array.isArray(data)) return [];
+        return data
+          .filter((t) => t && typeof t.title === "string" && t.title.trim())
+          .map((t) => ({ id: typeof t.id === "string" ? t.id : uid(), title: t.title, done: !!t.done }));
+      } catch {
+        return [];
+      }
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(tasks));
+      } catch {
+        // Storage unavailable: the list still works for this visit.
+      }
+    }
+
+    function visible() {
+      if (filter === "open") return tasks.filter((t) => !t.done);
+      if (filter === "done") return tasks.filter((t) => t.done);
+      return tasks;
+    }
+
+    function render(focus) {
+      const open = tasks.filter((t) => !t.done).length;
+      const counts = { all: tasks.length, open, done: tasks.length - open };
+
+      document.querySelectorAll("[data-filter]").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.filter === filter));
+      });
+      document.querySelectorAll("[data-count]").forEach((el) => {
+        el.textContent = counts[el.dataset.count] || "";
+      });
+
+      list.replaceChildren();
+      for (const task of visible()) list.append(row(task));
+
+      const empty = $("empty");
+      empty.hidden = list.children.length > 0;
+      empty.textContent = EMPTY[filter];
+
+      $("left").textContent = tasks.length ? `${open} left` : "";
+      $("clear-done").disabled = counts.done === 0;
+
+      restoreFocus(focus);
+    }
+
+    function row(task) {
+      const li = document.createElement("li");
+      li.className = "task" + (task.done ? " done" : "");
+      li.dataset.id = task.id;
+
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.checked = task.done;
+      box.dataset.role = "toggle";
+      box.setAttribute("aria-label", `Done: ${task.title}`);
+      li.append(box);
+
+      if (editing === task.id) {
+        const edit = document.createElement("input");
+        edit.type = "text";
+        edit.className = "edit-input";
+        edit.value = task.title;
+        edit.maxLength = 200;
+        edit.dataset.role = "edit-input";
+        edit.setAttribute("aria-label", `Rename ${task.title}`);
+        li.append(edit);
+        return li;
+      }
+
+      const title = document.createElement("div");
+      title.className = "title";
+      const text = document.createElement("span");
+      text.textContent = task.title;
+      title.append(text);
+      li.append(title);
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      for (const [role, label] of [["edit", "Edit"], ["delete", "Delete"]]) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.role = role;
+        b.textContent = label;
+        b.setAttribute("aria-label", `${label} ${task.title}`);
+        actions.append(b);
+      }
+      li.append(actions);
+      return li;
+    }
+
+    function restoreFocus(focus) {
+      if (!focus) return;
+      if (focus === "input") return input.focus();
+      const el = list.querySelector(`[data-id="${focus.id}"] [data-role="${focus.role}"]`);
+      if (el) {
+        el.focus();
+        if (focus.role === "edit-input") el.select();
+      } else {
+        input.focus();
+      }
+    }
+
+    function update(id, changes) {
+      tasks = tasks.map((t) => (t.id === id ? { ...t, ...changes } : t));
+      save();
+    }
+
+    function commitEdit(id, value, cancel) {
+      if (editing !== id) return;
+      editing = null;
+      const title = value.trim();
+      if (!cancel && title) update(id, { title });
+      render({ id, role: "edit" });
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const title = input.value.trim();
+      if (!title) return;
+      tasks.push({ id: uid(), title, done: false });
+      input.value = "";
+      if (filter === "done") filter = "all";
+      save();
+      render("input");
+    });
+
+    list.addEventListener("change", (e) => {
+      if (e.target.dataset.role !== "toggle") return;
+      const id = e.target.closest(".task").dataset.id;
+      // In a filtered view the row leaves; keep focus moving through the list.
+      const focus = filter === "all" ? { id, role: "toggle" } : nextFocus(id);
+      update(id, { done: e.target.checked });
+      render(focus);
+    });
+
+    list.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-role]");
+      if (!btn) return;
+      const id = btn.closest(".task").dataset.id;
+      if (btn.dataset.role === "edit") {
+        editing = id;
+        render({ id, role: "edit-input" });
+      } else if (btn.dataset.role === "delete") {
+        const next = nextFocus(id);
+        tasks = tasks.filter((t) => t.id !== id);
+        save();
+        render(next);
+      }
+    });
+
+    list.addEventListener("dblclick", (e) => {
+      const li = e.target.closest(".task");
+      if (!li || !e.target.closest(".title")) return;
+      editing = li.dataset.id;
+      render({ id: editing, role: "edit-input" });
+    });
+
+    list.addEventListener("keydown", (e) => {
+      if (e.target.dataset.role !== "edit-input") return;
+      const id = e.target.closest(".task").dataset.id;
+      if (e.key === "Enter") commitEdit(id, e.target.value, false);
+      if (e.key === "Escape") commitEdit(id, e.target.value, true);
+    });
+
+    list.addEventListener("focusout", (e) => {
+      if (e.target.dataset.role !== "edit-input") return;
+      const id = e.target.closest(".task").dataset.id;
+      commitEdit(id, e.target.value, false);
+    });
+
+    function nextFocus(id) {
+      const shown = visible();
+      const i = shown.findIndex((t) => t.id === id);
+      const next = shown[i + 1] || shown[i - 1];
+      return next ? { id: next.id, role: "toggle" } : "input";
+    }
+
+    document.querySelector(".filters").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-filter]");
+      if (!b) return;
+      filter = b.dataset.filter;
+      editing = null;
+      render();
+    });
+
+    $("clear-done").addEventListener("click", () => {
+      tasks = tasks.filter((t) => !t.done);
+      save();
+      render("input");
+    });
+
+    const now = new Date();
+    $("day").textContent = now.toLocaleDateString(undefined, { weekday: "long" });
+    $("date").textContent = now.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+
+    render();
+  </script>
+</body>
+</html>
